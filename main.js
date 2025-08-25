@@ -14,6 +14,8 @@ const btnUpload3D    = document.getElementById('btnUpload3D');
 
 const BUTTONS_3D = [btnPlay3D, btnUpload3D];
 
+const scene = document.querySelector('a-scene');
+
 const setUploadBtn = (txt, dis=false) => { uploadBtn.textContent = txt; uploadBtn.disabled = dis; };
 const mapVideo = () => {
     domeEl.setAttribute('material', { shader: 'flat', side: 'double', color: '#FFF', src: '#vid' });
@@ -30,8 +32,22 @@ const setPlayLabel = () => {
 uploadBtn.addEventListener('click', () => fileInput.click());
 btnUpload3D.addEventListener('click', () => fileInput.click());
 
+// 1) Utilitaire: refresh propre (même parent)
+const refreshControllers = () => {
+  ['leftHand', 'rightHand'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el || !el.parentNode) return;
+    const parent = el.parentNode;
+    const clone = el.cloneNode(true);
+    parent.removeChild(el);
+    parent.appendChild(clone);
+  });
+};
+
 // Gestion du fichier choisi
 fileInput.addEventListener('change', () => {
+    // Premier refresh tout de suite après le file picker
+    setTimeout(refreshControllers, 0);
     const file = fileInput.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('video/')) {
@@ -51,6 +67,8 @@ fileInput.addEventListener('change', () => {
     playBtn.style.display = 'inline-block';
     setPlayLabel();
     setButtonsOpacity(0.95);
+    // Second refresh une fois la vidéo prête (couvre le retour de focus XR)
+    setTimeout(refreshControllers, 0);
     }, { once:true });
 });
 
@@ -82,3 +100,8 @@ btnPlay3D.addEventListener('click', () => {
 videoEl.addEventListener('play',  () => { setButtonsOpacity(0.5);  setPlayLabel(); });
 videoEl.addEventListener('pause', () => { setButtonsOpacity(0.95); setPlayLabel(); });
 videoEl.addEventListener('ended', () => { setButtonsOpacity(0.95); setPlayLabel(); });
+
+// File picker recovery (filet de sécurité)
+window.addEventListener('visibilitychange', () => {
+  if (!document.hidden) setTimeout(refreshControllers, 0);
+});
