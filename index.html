@@ -49,7 +49,7 @@
     <!-- Curseur souris (rayon) pour cliquer en desktop -->
     <a-entity cursor="rayOrigin: mouse" raycaster="objects: .clickable"></a-entity>
 
-    <!-- Contrôleurs VR avec lasers (clic = gâchette) -->
+    <!-- Contrôleurs VR avec lasers -->
     <a-entity id="leftHand"  laser-controls="hand: left"  raycaster="objects: .clickable" cursor="rayOrigin: entity"></a-entity>
     <a-entity id="rightHand" laser-controls="hand: right" raycaster="objects: .clickable" cursor="rayOrigin: entity"></a-entity>
 
@@ -87,16 +87,15 @@
     const domeEl  = document.getElementById('dome');
 
     // Boutons 3D
-    const btnPlay3D        = document.getElementById('btnPlay3D');
-    const btnPlay3DLabel   = document.getElementById('btnPlay3DLabel');
-    const btnUpload3D      = document.getElementById('btnUpload3D');
+    const btnPlay3D      = document.getElementById('btnPlay3D');
+    const btnPlay3DLabel = document.getElementById('btnPlay3DLabel');
+    const btnUpload3D    = document.getElementById('btnUpload3D');
 
     const BUTTONS_3D = [btnPlay3D, btnUpload3D];
 
-    // Helpers
     const setUploadBtn = (txt, dis=false) => { uploadBtn.textContent = txt; uploadBtn.disabled = dis; };
-    const mapVideo = (colorHex) => {
-      domeEl.setAttribute('material', { shader: 'flat', side: 'double', color: colorHex, src: '#vid' });
+    const mapVideo = () => {
+      domeEl.setAttribute('material', { shader: 'flat', side: 'double', color: '#FFF', src: '#vid' });
       const m = domeEl.components?.material?.material; if (m) m.needsUpdate = true;
     };
     const setButtonsOpacity = (alpha) => {
@@ -106,99 +105,51 @@
       btnPlay3DLabel.setAttribute('value', videoEl.paused ? 'Play' : 'Pause');
     };
 
-    // Ouvrir le sélecteur de fichier (2D)
+    // Upload 2D et 3D déclenchent le file picker
     uploadBtn.addEventListener('click', () => fileInput.click());
-
-    // Ouvrir le sélecteur via bouton 3D Upload (laser/souris)
-    const triggerUpload = () => fileInput.click();
-    btnUpload3D.addEventListener('click', triggerUpload);
+    btnUpload3D.addEventListener('click', () => fileInput.click());
 
     // Gestion du fichier choisi
     fileInput.addEventListener('change', () => {
       const file = fileInput.files?.[0];
       if (!file) return;
-
       if (!file.type.startsWith('video/')) {
-        alert('Please choose a video file (MP4 H.264/AAC or WebM VP9/Opus).');
+        alert('Veuillez choisir une vidéo (MP4 ou WebM).');
         return;
       }
-
-      // État UI
       setUploadBtn('loading', true);
       playBtn.style.display = 'none';
 
-      // Préparer la vidéo
       const url = URL.createObjectURL(file);
-      videoEl.setAttribute('playsinline','');
-      videoEl.setAttribute('webkit-playsinline','');
-      videoEl.setAttribute('preload','auto');
-      videoEl.muted = true; // pour primer 1 frame
       videoEl.src = url;
       videoEl.load();
 
-      // Dès que la 1ère frame est décodable
-      const onLoaded = () => {
-        // 1) Mapper la vidéo en gardant le dôme noir
-        mapVideo('#000');
-
-        // 2) Jouer 1 frame, puis révéler en blanc sans flash
-        const reveal = () => {
-          videoEl.pause();
-          mapVideo('#FFF');
-          setUploadBtn('Upload video', false);
-          playBtn.style.display = 'inline-block';
-          setPlayLabel();         // maj label 3D
-          setButtonsOpacity(0.95);   // revenir semi-opaque après prime (au repos)
-        };
-
-        // Prime propre avec rVFC si dispo
-        if (typeof videoEl.requestVideoFrameCallback === 'function') {
-          videoEl.play().then(() => {
-            videoEl.requestVideoFrameCallback(() => reveal());
-          }).catch(() => {
-            const once = () => { videoEl.removeEventListener('timeupdate', once); reveal(); };
-            videoEl.addEventListener('timeupdate', once, { once: true });
-            videoEl.play().catch(()=>{});
-          });
-        } else {
-          const once = () => { videoEl.removeEventListener('timeupdate', once); reveal(); };
-          videoEl.addEventListener('timeupdate', once, { once: true });
-          videoEl.play().catch(()=>{});
-        }
-
-        videoEl.removeEventListener('loadeddata', onLoaded);
-      };
-      videoEl.addEventListener('loadeddata', onLoaded);
-
-      // Erreur
-      videoEl.addEventListener('error', () => {
-        alert('Unsupported video. Convert to MP4 (H.264 + AAC) or WebM (VP9 + Opus).');
+      videoEl.addEventListener('canplay', () => {
+        mapVideo();
         setUploadBtn('Upload video', false);
-        playBtn.style.display = 'none';
-        domeEl.setAttribute('material', 'color', '#000');
-      }, { once: true });
+        playBtn.style.display = 'inline-block';
+        setPlayLabel();
+        setButtonsOpacity(0.95);
+      }, { once:true });
     });
 
-    // Bouton 2D Play (backup)
+    // Bouton Play 2D
     playBtn.addEventListener('click', () => {
       if (!videoEl.src) return;
-      videoEl.muted = false;
-      videoEl.play().catch(err => console.warn('Play blocked:', err));
+      videoEl.play().catch(()=>{});
     });
 
-    // === Interactions 3D ===
-    // Hover léger (mise en valeur) au laser / souris
+    // Hover FX
     const addHoverFX = (el) => {
       el.addEventListener('mouseenter', () => el.setAttribute('scale', '1.05 1.05 1'));
       el.addEventListener('mouseleave', () => el.setAttribute('scale', '1 1 1'));
     };
     BUTTONS_3D.forEach(addHoverFX);
 
-    // Clic Play/Pause (souris + contrôleurs VR)
+    // Play/Pause 3D
     btnPlay3D.addEventListener('click', () => {
       if (!videoEl.src) return;
       if (videoEl.paused) {
-        videoEl.muted = false;
         videoEl.play().catch(()=>{});
       } else {
         videoEl.pause();
@@ -206,10 +157,11 @@
       setPlayLabel();
     });
 
-    // Opacité auto des boutons 3D selon l’état de la vidéo
+    // Gestion opacité
     videoEl.addEventListener('play',  () => { setButtonsOpacity(0.5);  setPlayLabel(); });
     videoEl.addEventListener('pause', () => { setButtonsOpacity(0.95); setPlayLabel(); });
     videoEl.addEventListener('ended', () => { setButtonsOpacity(0.95); setPlayLabel(); });
   </script>
 </body>
 </html>
+
