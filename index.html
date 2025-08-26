@@ -25,22 +25,14 @@
     <!-- Caméra + HUD 3D -->
     <a-entity id="rig">
       <a-entity id="cam" camera look-controls wasd-controls position="0 1.6 3">
-        <!-- HUD : 2 boutons 3D devant la caméra -->
+        <!-- HUD : 3D devant la caméra -->
         <a-entity id="hud" position="0 -0.25 -1.1">
-          <!-- Bouton Play/Pause -->
+          <!-- Bouton Play/Pause centré -->
           <a-entity id="btnPlay3D" class="clickable"
                     geometry="primitive: plane; width: 0.36; height: 0.12"
                     material="color: #2E7DFF; transparent: true; opacity: 0.95"
-                    position="-0.21 0 0">
+                    position="0 0 0">
             <a-text id="btnPlay3DLabel" value="Play" align="center" width="1.6" position="0 0 0.01"></a-text>
-          </a-entity>
-
-          <!-- Bouton Upload (toujours visible, sélectionnable au laser) -->
-          <a-entity id="btnUpload3D" class="clickable"
-                    geometry="primitive: plane; width: 0.36; height: 0.12"
-                    material="color: #43A047; transparent: true; opacity: 0.95"
-                    position="0.21 0 0">
-            <a-text id="btnUpload3DLabel" value="Upload" align="center" width="1.6" position="0 0 0.01"></a-text>
           </a-entity>
         </a-entity>
       </a-entity>
@@ -79,4 +71,3 @@
   <script src="main.js"></script>
 </body>
 </html>
-
