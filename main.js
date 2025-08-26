@@ -14,66 +14,6 @@ const btnUpload3D    = document.getElementById('btnUpload3D');
 
 const BUTTONS_3D = [btnPlay3D, btnUpload3D];
 
-// --- VR-safe upload flow ---
-const sceneEl = document.querySelector('a-scene');
-let _returnToVR = false;
-
-async function vrSafeFilePick() {
-  _returnToVR = sceneEl.is('vr-mode');
-  if (_returnToVR) {
-    // Ensure we fully exit VR before opening the native picker
-    await new Promise(res => {
-      const once = () => { sceneEl.removeEventListener('exit-vr', once); res(); };
-      sceneEl.addEventListener('exit-vr', once, { once: true });
-      sceneEl.exitVR();
-    });
-  }
-  // Open picker once we're safely out of XR
-  fileInput.click();
-}
-
-// Re-enter VR automatically when the new video is ready to map
-function maybeReturnToVR() {
-  if (_returnToVR) {
-    _returnToVR = false;
-    // Small timeout lets A-Frame finish material/video updates before re-entering
-    setTimeout(() => sceneEl.enterVR(), 100);
-  }
-}
-
-function refreshControllers() {
-  ['leftHand', 'rightHand'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-
-    // Force re-init of the laser + raycaster + cursor without DOM cloning
-    const hand = id === 'leftHand' ? 'left' : 'right';
-
-    // Toggle attributes to make A-Frame rebuild the components
-    el.removeAttribute('laser-controls');
-    el.removeAttribute('raycaster');
-    el.removeAttribute('cursor');
-
-    el.setAttribute('laser-controls', `hand: ${hand}`);
-    el.setAttribute('raycaster', 'objects: .clickable');
-    el.setAttribute('cursor', 'rayOrigin: entity');
-  });
-}
-
-sceneEl.addEventListener('enter-vr', () => {
-  setTimeout(refreshControllers, 50);
-});
-
-sceneEl.addEventListener('enter-vr', () => {
-  const session = sceneEl.renderer?.xr?.getSession?.();
-  if (!session) return;
-  session.addEventListener('visibilitychange', () => {
-    if (session.visibilityState === 'visible') {
-      setTimeout(refreshControllers, 50);
-    }
-  });
-});
-
 const setUploadBtn = (txt, dis=false) => { uploadBtn.textContent = txt; uploadBtn.disabled = dis; };
 const mapVideo = () => {
     domeEl.setAttribute('material', { shader: 'flat', side: 'double', color: '#FFF', src: '#vid' });
@@ -87,8 +27,8 @@ const setPlayLabel = () => {
 };
 
 // Upload 2D et 3D déclenchent le file picker
-uploadBtn.addEventListener('click', vrSafeFilePick);
-btnUpload3D.addEventListener('click', vrSafeFilePick);
+uploadBtn.addEventListener('click', () => fileInput.click());
+btnUpload3D.addEventListener('click', () => fileInput.click());
 
 // Gestion du fichier choisi
 fileInput.addEventListener('change', () => {
@@ -111,7 +51,6 @@ fileInput.addEventListener('change', () => {
     playBtn.style.display = 'inline-block';
     setPlayLabel();
     setButtonsOpacity(0.95);
-    maybeReturnToVR();
     }, { once:true });
 });
 
@@ -143,4 +82,3 @@ btnPlay3D.addEventListener('click', () => {
 videoEl.addEventListener('play',  () => { setButtonsOpacity(0.5);  setPlayLabel(); });
 videoEl.addEventListener('pause', () => { setButtonsOpacity(0.95); setPlayLabel(); });
 videoEl.addEventListener('ended', () => { setButtonsOpacity(0.95); setPlayLabel(); });
-
