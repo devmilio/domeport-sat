@@ -82,3 +82,45 @@ btnPlay3D.addEventListener('click', () => {
 videoEl.addEventListener('play',  () => { setButtonsOpacity(0.5);  setPlayLabel(); });
 videoEl.addEventListener('pause', () => { setButtonsOpacity(0.95); setPlayLabel(); });
 videoEl.addEventListener('ended', () => { setButtonsOpacity(0.95); setPlayLabel(); });
+
+
+// --- Minimal "refresh on enter-vr"
+const sceneEl = document.querySelector('a-scene');
+let _vrEnterListenerBound = false;
+let _refreshPending = false;
+
+// Debounced scheduler so bursts collapse into one refresh
+function scheduleControllerRefresh() {
+  if (_refreshPending) return;
+  _refreshPending = true;
+  requestAnimationFrame(() => {
+    _refreshPending = false;
+    refreshControllers();
+  });
+}
+
+// Lightweight re-init for lasers/raycasters/cursor
+function refreshControllers() {
+  ['leftHand', 'rightHand'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const hand = id === 'leftHand' ? 'left' : 'right';
+    try {
+      el.removeAttribute('laser-controls');
+      el.removeAttribute('raycaster');
+      el.removeAttribute('cursor');
+    } catch (_) {}
+    el.setAttribute('laser-controls', `hand: ${hand}`);
+    el.setAttribute('raycaster', 'objects: .clickable');
+    el.setAttribute('cursor', 'rayOrigin: entity');
+  });
+}
+
+// Bind exactly once; refresh now + one short tick after entering VR
+if (sceneEl && !_vrEnterListenerBound) {
+  sceneEl.addEventListener('enter-vr', () => {
+    scheduleControllerRefresh();
+    setTimeout(scheduleControllerRefresh, 50);
+  });
+  _vrEnterListenerBound = true;
+}
